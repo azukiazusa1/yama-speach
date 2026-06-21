@@ -1,0 +1,132 @@
+:root {
+  color: #f9f6e8;
+  font-family: "Avenir Next", "Hiragino Kaku Gothic ProN", "Yu Gothic", system-ui, sans-serif;
+  font-synthesis: none;
+  --forest: #163d2e;
+  --forest-dark: #0b251b;
+  --cream: #f4f0df;
+  --orange: #ff7a31;
+  --yellow: #ffd657;
+  --ink: #172018;
+}
+
+* { box-sizing: border-box; }
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #a8d9dc; }
+button { font: inherit; }
+button:focus-visible { outline: 3px solid var(--yellow); outline-offset: 4px; }
+#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+.hidden { opacity: 0 !important; visibility: hidden !important; }
+#hud {
+  position: fixed; z-index: 10; top: 22px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 9px; transition: opacity .3s;
+}
+.hud-pill {
+  height: 46px; min-width: 96px; padding: 0 17px; display: flex; align-items: center; justify-content: center; gap: 9px;
+  color: var(--ink); background: rgba(250,247,231,.92); border: 1px solid rgba(23,32,24,.12);
+  border-radius: 999px; box-shadow: 0 8px 30px rgba(18,48,37,.14); backdrop-filter: blur(10px);
+  font-size: 17px; font-variant-numeric: tabular-nums;
+}
+.hud-pill > span { color: #dd9d00; font-size: 19px; }
+.hud-pill.phase { min-width: 82px; transition: color .5s, background .5s; }
+.hud-pill.phase.evening { color: white; background: rgba(79,59,76,.92); }
+.hud-pill.phase.evening > span { color: #ffd08b; }
+.hud-pill.timer { min-width: 118px; background: var(--forest); color: white; }
+.hud-pill.timer > span { color: var(--yellow); }
+.hud-pill.lives > span { color: #e85043; }
+.hud-pill.danger { animation: danger .75s infinite alternate; }
+@keyframes danger { to { color: white; background: #b74035; transform: scale(1.05); } }
+
+.icon-button {
+  position: fixed; z-index: 31; right: 22px; top: 22px; width: 45px; height: 45px; border: 1px solid rgba(255,255,255,.35);
+  border-radius: 50%; color: white; background: rgba(17,48,36,.7); cursor: pointer; backdrop-filter: blur(8px);
+}
+.icon-button.muted { opacity: .55; text-decoration: line-through; }
+#crosshair { position: fixed; z-index: 8; inset: 50% auto auto 50%; width: 5px; height: 5px; border-radius: 50%; background: rgba(255,255,255,.8); box-shadow: 0 0 0 5px rgba(0,0,0,.12); }
+#interaction {
+  position: fixed; z-index: 12; bottom: 58px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 12px;
+  padding: 11px 18px 11px 11px; border-radius: 12px; background: rgba(12,33,25,.9); color: white; box-shadow: 0 10px 34px rgba(0,0,0,.25);
+  transition: opacity .18s, transform .18s;
+}
+kbd { min-width: 30px; padding: 5px 7px; border-radius: 6px; display: inline-block; text-align: center; background: #fff; color: #173326; border-bottom: 3px solid #c9c7b9; font: 700 12px "Avenir Next", sans-serif; }
+#toast { position: fixed; z-index: 20; left: 50%; top: 92px; transform: translate(-50%,-12px); padding: 12px 20px; border-radius: 999px; color: white; background: rgba(12,35,26,.9); opacity: 0; transition: .25s; pointer-events: none; }
+#toast.show { opacity: 1; transform: translate(-50%,0); }
+
+.screen {
+  position: fixed; z-index: 25; inset: 0; display: grid; place-items: center; padding: 6vw;
+  opacity: 0; visibility: hidden; transition: opacity .5s, visibility .5s; background: linear-gradient(90deg, rgba(9,38,27,.89), rgba(9,38,27,.3) 65%, rgba(9,38,27,.05));
+}
+.screen.visible { opacity: 1; visibility: visible; }
+.start-card { width: min(690px, 70vw); justify-self: start; }
+.eyebrow { margin: 0 0 20px; color: var(--yellow); font: 700 12px "Avenir Next", sans-serif; letter-spacing: .28em; }
+.start-card h1 { margin: 0; font-size: clamp(52px, 7vw, 108px); line-height: .92; letter-spacing: -.065em; text-wrap: balance; }
+.start-card h1 em { color: var(--yellow); font-style: normal; }
+.intro { max-width: 610px; margin: 30px 0; color: rgba(255,255,255,.82); font-size: clamp(15px,1.4vw,19px); line-height: 1.9; }
+.mission-row { display: flex; flex-wrap: wrap; gap: 10px; margin: 24px 0 32px; }
+.mission-row span { padding: 9px 13px; border: 1px solid rgba(255,255,255,.28); border-radius: 999px; font-size: 13px; font-weight: 700; }
+.primary-button {
+  min-width: 230px; padding: 17px 19px 17px 23px; display: inline-flex; align-items: center; justify-content: space-between; gap: 35px;
+  color: #173326; background: var(--yellow); border: 0; border-radius: 8px; font-weight: 800; cursor: pointer; box-shadow: 0 12px 34px rgba(4,26,17,.2);
+  transition: transform .18s, background .18s;
+}
+.primary-button:hover { transform: translateY(-2px); background: #ffe477; }
+.primary-button span { font-size: 20px; }
+.controls { display: flex; gap: 18px; margin-top: 28px; color: rgba(255,255,255,.63); font-size: 11px; letter-spacing: .04em; }
+.controls span { display: flex; align-items: center; gap: 7px; }
+.controls kbd { padding: 4px 6px; min-width: 25px; font-size: 9px; }
+.start-index { position: absolute; right: 6vw; bottom: 6vw; display: flex; align-items: center; gap: 12px; font-size: 10px; letter-spacing: .2em; }
+.start-index i { display: block; width: 80px; height: 1px; background: rgba(255,255,255,.5); }
+
+.modal {
+  position: fixed; z-index: 30; inset: 0; display: grid; place-items: center; padding: 30px; opacity: 0; visibility: hidden;
+  background: rgba(7,26,19,.72); backdrop-filter: blur(7px); transition: .3s;
+}
+.modal.visible { opacity: 1; visibility: visible; }
+.paper-card {
+  position: relative; width: min(760px, 92vw); max-height: min(760px, 88vh); overflow: auto; padding: clamp(28px,5vw,60px);
+  color: var(--ink); background: var(--cream); border-radius: 4px; box-shadow: 0 28px 80px rgba(0,0,0,.35); transform: translateY(18px) rotate(-.5deg); transition: transform .3s;
+}
+.modal.visible .paper-card { transform: none; }
+.paper-card::before { content: ""; position: absolute; inset: 14px; pointer-events: none; border: 1px solid rgba(24,54,39,.12); }
+.paper-meta { display: flex; justify-content: space-between; position: relative; color: #5f6c61; font: 700 11px "Avenir Next", sans-serif; letter-spacing: .16em; }
+.found-badge { color: #9a6b00; }
+.paper-card h2 { position: relative; margin: 26px 0 18px; font-size: clamp(30px,4vw,49px); letter-spacing: -.04em; }
+.paper-body { position: relative; margin-bottom: 35px; font-size: clamp(14px,1.35vw,17px); line-height: 2; white-space: pre-line; }
+.primary-button.dark { position: relative; color: white; background: var(--forest); }
+
+#end-screen { background: rgba(10,36,27,.82); backdrop-filter: blur(8px); }
+.end-card { width: min(600px,90vw); text-align: center; }
+.end-card h2 { margin: 0; font-size: clamp(48px,7vw,90px); letter-spacing: -.06em; }
+.end-card > p:not(.eyebrow) { margin: 23px auto; max-width: 480px; color: rgba(255,255,255,.72); line-height: 1.8; }
+.end-card .mission-row { justify-content: center; }
+
+#slides { position: fixed; z-index: 40; inset: 0; opacity: 0; visibility: hidden; color: white; background: #102c21; transition: opacity .7s, visibility .7s; }
+#slides.visible { opacity: 1; visibility: visible; }
+#slide-stage { width: 100%; height: 100%; }
+.slide { position: absolute; inset: 0; display: grid; align-items: end; padding: clamp(40px,7vw,105px); opacity: 0; visibility: hidden; transition: opacity .55s; overflow: hidden; }
+.slide.active { opacity: 1; visibility: visible; }
+.slide-bg { position: absolute; inset: 0; background-position: center; background-size: cover; transform: scale(1.03); }
+.slide-bg::after { content:""; position:absolute; inset:0; background: linear-gradient(90deg, rgba(8,31,22,.92) 0%, rgba(8,31,22,.67) 50%, rgba(8,31,22,.15) 100%); }
+.slide:not(.has-photo) { background: radial-gradient(circle at 78% 25%, #3d7554, #102c21 55%); }
+.slide::after { content: attr(data-number); position: absolute; right: 5vw; top: 3vw; color: rgba(255,255,255,.16); font-size: clamp(100px,20vw,270px); font-weight: 800; line-height: 1; letter-spacing: -.1em; }
+.slide-content { position: relative; z-index: 2; max-width: 860px; }
+.slide-kicker { margin-bottom: 20px; color: var(--yellow); font: 700 12px "Avenir Next", sans-serif; letter-spacing: .24em; }
+.slide h2 { margin: 0 0 25px; font-size: clamp(38px,6vw,82px); line-height: 1.08; letter-spacing: -.055em; text-wrap: balance; }
+.slide p { max-width: 760px; margin: 0; font-size: clamp(14px,1.45vw,19px); line-height: 1.9; color: rgba(255,255,255,.82); white-space: pre-line; }
+.slide-controls { position: absolute; z-index: 5; right: 5vw; bottom: 4vw; display: flex; align-items: center; gap: 15px; }
+.slide-controls button { width: 43px; height: 43px; color: white; border: 1px solid rgba(255,255,255,.35); border-radius: 50%; background: rgba(0,0,0,.25); cursor: pointer; }
+#slide-counter { font-size: 12px; letter-spacing: .16em; }
+.slide-replay { position: absolute; z-index: 5; left: 5vw; top: 4vw; color: white; background: none; border: 0; border-bottom: 1px solid rgba(255,255,255,.4); padding: 5px 0; cursor: pointer; font-size: 12px; }
+
+@media (max-width: 720px) {
+  .start-card { width: 100%; }
+  .controls { display: grid; grid-template-columns: 1fr 1fr; }
+  .start-index { display: none; }
+  .hud-pill { min-width: 70px; padding: 0 9px; }
+  .hud-pill.phase { min-width: 65px; }
+  .hud-pill.timer { min-width: 94px; }
+  #hud { top: 15px; }
+  .icon-button { top: auto; bottom: 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition-duration: .01ms !important; } }
