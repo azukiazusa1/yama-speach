@@ -1,529 +1,71 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ja">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>山にハマっています — azukiazusa</title>
-<style>
-  :root{
-    --cyan:#22d3ee;
-    --teal:#2dd4bf;
-    --ink:#05080f;
-    --fg:#e8fbff;
-  }
-  *{margin:0;padding:0;box-sizing:border-box;}
-  html,body{height:100%;overflow:hidden;background:var(--ink);}
-  body{
-    font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",YuGothic,"Noto Sans JP",sans-serif;
-    color:var(--fg);
-    -webkit-font-smoothing:antialiased;
-  }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#173a2c" />
+    <title>朝会スピーチ・トレイル</title>
+  </head>
+  <body>
+    <canvas id="game" aria-label="3Dの登山ゲーム"></canvas>
 
-  /* 3D canvas (背景) */
-  #bg{position:fixed;inset:0;z-index:0;display:block;}
+    <header id="hud" class="hidden" aria-label="ゲーム情報">
+      <div class="hud-pill phase"><span id="phase-icon" aria-hidden="true">☀</span><strong id="phase-label">朝</strong></div>
+      <div class="hud-pill"><span aria-hidden="true">★</span><strong id="star-count">0/6</strong></div>
+      <div class="hud-pill timer"><span aria-hidden="true">◷</span><strong id="timer">03:00</strong></div>
+      <div class="hud-pill lives"><span aria-hidden="true">♥</span><strong id="life-count">3</strong></div>
+    </header>
 
-  /* 終盤：自然写真への切替レイヤー */
-  #nature{
-    position:fixed;inset:0;z-index:1;opacity:0;
-    background-size:cover;background-position:center;
-    transition:opacity 1.6s ease;
-    pointer-events:none;
-  }
-  #nature::after{ /* 文字可読性のためのグラデ */
-    content:"";position:absolute;inset:0;
-    background:linear-gradient(180deg,rgba(2,6,15,.35) 0%,rgba(2,6,15,.15) 40%,rgba(2,6,15,.78) 100%);
-  }
-  body.nature #nature{opacity:1;}
-  body.nature #bg{filter:brightness(.35) saturate(.6);transition:filter 1.6s ease;}
+    <button id="sound-toggle" class="icon-button" type="button" aria-label="音をミュート">♪</button>
+    <div id="crosshair" class="hidden" aria-hidden="true"></div>
+    <div id="interaction" class="hidden"><kbd>E</kbd><span id="interaction-label">原稿を読む</span></div>
+    <div id="toast" role="status" aria-live="polite"></div>
 
-  /* スライド本体 */
-  #stage{position:fixed;inset:0;z-index:2;}
-  .slide{
-    position:absolute;inset:0;
-    display:flex;flex-direction:column;justify-content:center;
-    padding:0 9vw;
-    opacity:0;visibility:hidden;
-    transform:translateY(26px);
-    transition:opacity .7s ease,transform .7s ease,visibility .7s;
-    pointer-events:none;
-  }
-  .slide.active{opacity:1;visibility:visible;transform:none;}
-
-  .kicker{
-    font-size:clamp(.8rem,1.6vw,1.15rem);
-    letter-spacing:.42em;
-    color:var(--cyan);
-    text-transform:uppercase;
-    margin-bottom:1.4rem;
-    text-shadow:0 0 18px rgba(34,211,238,.55);
-  }
-  .slide h1{
-    font-size:clamp(2.4rem,7vw,6rem);
-    font-weight:800;line-height:1.08;
-    letter-spacing:.01em;
-    text-shadow:0 4px 40px rgba(0,0,0,.55);
-  }
-  .slide h2{
-    font-size:clamp(1.9rem,5.4vw,4.4rem);
-    font-weight:800;line-height:1.14;
-    text-shadow:0 4px 40px rgba(0,0,0,.6);
-  }
-  .lede{
-    margin-top:1.6rem;
-    font-size:clamp(1rem,2.2vw,1.7rem);
-    color:#bfe9f2;font-weight:500;line-height:1.7;
-    max-width:30ch;
-  }
-  .accent{color:var(--cyan);text-shadow:0 0 22px rgba(34,211,238,.6);}
-  .warm{color:#ffd27a;text-shadow:0 0 22px rgba(255,180,80,.5);}
-
-  /* 山名チップ */
-  .peaks{display:flex;gap:1rem;flex-wrap:wrap;margin-top:2.2rem;}
-  .peak{
-    font-size:clamp(1.2rem,2.8vw,2.2rem);font-weight:700;
-    padding:.5em 1.1em;border:1.5px solid rgba(34,211,238,.55);
-    border-radius:999px;background:rgba(34,211,238,.06);
-    box-shadow:0 0 24px rgba(34,211,238,.18) inset,0 0 18px rgba(34,211,238,.12);
-    opacity:0;transform:translateY(14px);
-    transition:opacity .5s ease,transform .5s ease;
-  }
-  .slide.active .peak{opacity:1;transform:none;}
-  .slide.active .peak:nth-child(1){transition-delay:.25s;}
-  .slide.active .peak:nth-child(2){transition-delay:.45s;}
-  .slide.active .peak:nth-child(3){transition-delay:.65s;}
-
-  /* 本音の独白 */
-  .mutter{display:flex;flex-direction:column;gap:.7rem;margin-top:.4rem;}
-  .mutter span{
-    font-size:clamp(1.8rem,5vw,4rem);font-weight:800;color:#9fb4c2;
-    opacity:0;transform:translateX(-18px);
-    transition:opacity .5s ease,transform .5s ease;
-  }
-  .slide.active .mutter span{opacity:1;transform:none;}
-  .slide.active .mutter span:nth-child(1){transition-delay:.3s;}
-  .slide.active .mutter span:nth-child(2){transition-delay:1.3s;}
-  .slide.active .mutter span:nth-child(3){transition-delay:2.3s;}
-  .slide.active .mutter span:nth-child(4){transition-delay:3.3s;color:#6d8595;}
-
-  /* 写真カード（前半スライド用） */
-  .photo-card{
-    position:absolute;right:7vw;top:50%;transform:translateY(-50%) rotate(2.5deg);
-    width:min(34vw,420px);aspect-ratio:3/4;
-    border:2px solid rgba(34,211,238,.5);border-radius:14px;overflow:hidden;
-    box-shadow:0 0 40px rgba(34,211,238,.25),0 24px 60px rgba(0,0,0,.5);
-    opacity:0;transition:opacity .9s ease .35s,transform .9s ease .35s;
-  }
-  .slide.active .photo-card{opacity:1;transform:translateY(-50%) rotate(-1.5deg);}
-  .photo-card img{width:100%;height:100%;object-fit:cover;}
-
-  .name{
-    margin-top:2.6rem;font-size:clamp(1rem,2vw,1.5rem);
-    letter-spacing:.18em;color:#9fd9e6;font-weight:600;
-  }
-  .name::before{content:"▲ ";color:var(--cyan);}
-
-  /* 締めの一文 */
-  .closing .line{
-    font-size:clamp(1.7rem,4.6vw,3.6rem);font-weight:800;line-height:1.3;
-  }
-  .closing .line.two{margin-top:1.2rem;}
-
-  /* 「疲れた…」：時間とともに霧が濃くなり、視界が狭まる */
-  #gasp{position:fixed;inset:0;z-index:4;pointer-events:none;opacity:0;transition:opacity .7s ease;overflow:hidden;}
-  body.gasp #gasp{opacity:1;}
-  #gasp .fog{ /* 白い霧がじわじわ濃くなる */
-    position:absolute;inset:0;opacity:0;
-    background:radial-gradient(ellipse at 50% 48%, rgba(232,243,255,.42), rgba(212,228,244,.2));
-  }
-  #gasp .haze{ /* 疲労で視界が内側へ狭まる（トンネル化） */
-    position:absolute;inset:-20%;opacity:0;transform:scale(1.85);transform-origin:50% 50%;
-    background:radial-gradient(circle at 50% 50%, transparent 0%, transparent 26%, rgba(0,0,0,.93) 70%);
-  }
-  /* 「疲れた…」出現(0.3s)で霧が出始め、「楽しくない…」表示(約3.8s)で最大化 */
-  body.gasp #gasp .fog{animation:fogup 3.5s ease-in .3s forwards;}
-  body.gasp #gasp .haze{animation:narrow 3.5s ease-in .3s forwards;}
-  @keyframes fogup{from{opacity:0;}to{opacity:.62;}}
-  @keyframes narrow{0%{opacity:0;transform:scale(1.85);}100%{opacity:1;transform:scale(1);}}
-
-  /* HUD：進捗とヒント */
-  #hud{position:fixed;left:0;right:0;bottom:0;z-index:5;
-    display:flex;align-items:center;justify-content:space-between;
-    padding:1.1rem 2rem;pointer-events:none;}
-  #dots{display:flex;gap:.6rem;}
-  #dots i{width:9px;height:9px;border-radius:50%;
-    background:rgba(255,255,255,.22);transition:.3s;}
-  #dots i.on{background:var(--cyan);box-shadow:0 0 12px var(--cyan);transform:scale(1.25);}
-  #hint{font-size:.8rem;letter-spacing:.18em;color:rgba(255,255,255,.45);}
-  #alt{position:fixed;left:1.4rem;top:1.1rem;z-index:6;font-size:.72rem;
-    letter-spacing:.16em;color:rgba(255,255,255,.3);}
-
-  /* 3分タイマー */
-  #timer{position:fixed;right:1.4rem;top:1.1rem;z-index:7;
-    font-variant-numeric:tabular-nums;font-size:1.6rem;font-weight:800;letter-spacing:.04em;
-    color:#bfe9f2;background:rgba(5,8,15,.55);border:1px solid rgba(34,211,238,.4);
-    border-radius:10px;padding:.2em .6em;backdrop-filter:blur(4px);}
-  #timer.idle{opacity:.65;}
-  #timer.warn{color:#ffd27a;border-color:rgba(255,180,80,.65);}
-  #timer.over{color:#ff6b6b;border-color:#ff6b6b;animation:tblink 1s steps(2,end) infinite;}
-  @keyframes tblink{50%{opacity:.35;}}
-
-  /* スピーカーノートを開く案内バッジ（別ウィンドウ起動） */
-  #note-badge{position:fixed;right:1.4rem;bottom:4.6rem;z-index:8;
-    display:flex;flex-direction:column;align-items:center;gap:.25em;cursor:pointer;
-    font-family:inherit;font-size:1.02rem;font-weight:800;color:#04141c;letter-spacing:.02em;
-    background:linear-gradient(135deg,#22d3ee,#2dd4bf);border:none;border-radius:13px;
-    padding:.75em 1.2em;box-shadow:0 6px 24px rgba(0,0,0,.4);
-    animation:badgepulse 2s ease-out infinite;pointer-events:auto;}
-  #note-badge small{font-size:.7rem;font-weight:700;opacity:.78;letter-spacing:.06em;}
-  #note-badge[hidden]{display:none;}
-  @keyframes badgepulse{
-    0%{box-shadow:0 6px 24px rgba(0,0,0,.4),0 0 0 0 rgba(34,211,238,.55);}
-    70%{box-shadow:0 6px 24px rgba(0,0,0,.4),0 0 0 18px rgba(34,211,238,0);}
-    100%{box-shadow:0 6px 24px rgba(0,0,0,.4),0 0 0 0 rgba(34,211,238,0);}
-  }
-
-  @media (max-aspect-ratio:1/1){
-    .photo-card{position:static;width:70vw;margin-top:2rem;transform:rotate(-1.5deg);}
-    .slide.active .photo-card{transform:rotate(-1.5deg);}
-    .slide{padding:0 7vw;}
-  }
-</style>
-</head>
-<body>
-  <canvas id="bg"></canvas>
-  <div id="nature"></div>
-
-  <div id="stage">
-    <!-- 1 タイトル -->
-    <section class="slide" data-cam="0">
-      <div class="kicker">Morning Talk</div>
-      <h1>山に、<span class="accent">ハマって</span>います。</h1>
-      <p class="lede">〜 苦しさの先にある、達成感の話 〜</p>
-      <div class="name">azukiazusa</div>
+    <section id="start-screen" class="screen visible">
+      <div class="start-card">
+        <p class="eyebrow">MORNING SPEECH QUEST</p>
+        <h1>朝会スピーチ・<br /><em>トレイル</em></h1>
+        <p class="intro">山に散らばった6つの原稿を、3分以内に集めよう。<br />すべて見つけたら、朝会スピーチの始まりです。</p>
+        <div class="mission-row">
+          <span>★ 原稿 6枚</span><span>◷ 制限 3分</span><span>♥ ライフ 3</span>
+        </div>
+        <button id="start-button" class="primary-button" type="button">登山をはじめる <span>→</span></button>
+        <div class="controls">
+          <span><kbd>WASD / ↑↓←→</kbd> 移動</span><span><kbd>SHIFT</kbd> ダッシュ</span><span><kbd>MOUSE</kbd> 視点</span><span><kbd>E</kbd> 取得</span>
+        </div>
+      </div>
+      <div class="start-index"><span>01</span><i></i><span>SUMMIT</span></div>
     </section>
 
-    <!-- 2 3座 -->
-    <section class="slide" data-cam="1">
-      <div class="kicker">最近の週末</div>
-      <h2>3つの山に、登りました。</h2>
-      <div class="peaks">
-        <div class="peak">高尾山</div>
-        <div class="peak">宝登山</div>
-        <div class="peak">大山</div>
+    <section id="manuscript-modal" class="modal" aria-modal="true" aria-labelledby="manuscript-title">
+      <article class="paper-card">
+        <div class="paper-meta"><span id="manuscript-number">SCRIPT 01 / 06</span><span class="found-badge">★ FOUND</span></div>
+        <h2 id="manuscript-title"></h2>
+        <div id="manuscript-body" class="paper-body"></div>
+        <button id="close-manuscript" class="primary-button dark" type="button">トレイルに戻る <span>→</span></button>
+      </article>
+    </section>
+
+    <section id="end-screen" class="screen">
+      <div class="end-card">
+        <p id="end-eyebrow" class="eyebrow">TRAIL ENDED</p>
+        <h2 id="end-title">ゲームオーバー</h2>
+        <p id="end-message"></p>
+        <div id="end-stats" class="mission-row"></div>
+        <button id="retry-button" class="primary-button" type="button">もう一度登る <span>↻</span></button>
       </div>
     </section>
 
-    <!-- 3 登りやすい2座 -->
-    <section class="slide" data-cam="2">
-      <div class="kicker">高尾山 ・ 宝登山</div>
-      <h2>初心者でも、<br><span class="accent">登りやすい。</span></h2>
-      <p class="lede">よく整備された、ゆるやかな道。<br>森の空気が気持ちいい。</p>
-      <div class="photo-card"><img src="images/web/broad-forest-road.jpg" alt="森の登山道" /></div>
-    </section>
-
-    <!-- 4 大山の試練 -->
-    <section class="slide" data-cam="3">
-      <div class="kicker">大山</div>
-      <h2>でも大山は、<br><span class="warm">別物だった。</span></h2>
-      <p class="lede">ゴツゴツの岩山。険しい急登。<br>翌日、ふくらはぎが筋肉痛。</p>
-      <div class="photo-card"><img src="images/web/group-of-hikers-ascending-a-steep.jpg" alt="岩場を登る登山者たち" /></div>
-    </section>
-
-    <!-- 5 本音 -->
-    <section class="slide" data-cam="4">
-      <div class="kicker">登っている最中の本音</div>
-      <div class="mutter">
-        <span>疲れた…</span>
-        <span>足、痛い…</span>
-        <span>帰りたい…</span>
-        <span>楽しくない…</span>
+    <section id="slides" aria-label="朝会スピーチのスライド">
+      <div id="slide-stage"></div>
+      <div class="slide-controls">
+        <button id="prev-slide" type="button" aria-label="前のスライド">←</button>
+        <span id="slide-counter">01 / 07</span>
+        <button id="next-slide" type="button" aria-label="次のスライド">→</button>
       </div>
+      <button id="replay-button" class="slide-replay" type="button">もう一度プレイ</button>
     </section>
 
-    <!-- 6 山頂・達成感 -->
-    <section class="slide closing" data-cam="5">
-      <div class="kicker">それでも、山頂へ</div>
-      <h2>登り切った瞬間の、<br><span class="accent">達成感。</span></h2>
-      <p class="lede">日常では、決して味わえない景色。</p>
-    </section>
-
-    <!-- 7 学び -->
-    <section class="slide closing" data-cam="6">
-      <div class="kicker">山が教えてくれたこと</div>
-      <p class="line">効率ばかり求めると、<span class="warm">疲れてしまう。</span></p>
-      <p class="line two">だからこそ、自然とふれ合い、<br><span class="accent">あえて不便を味わう。</span></p>
-    </section>
-  </div>
-
-  <!-- 「疲れた…」用：徐々に霧が増え視界が狭まる（スライド5限定） -->
-  <div id="gasp"><div class="fog"></div><div class="haze"></div></div>
-
-  <div id="alt">↑ デジタル　／　自然 ↓</div>
-  <div id="timer" class="idle">3:00</div>
-
-  <!-- スピーカーノートを開く案内（クリック / N で別ウィンドウ起動。開くと消える） -->
-  <button id="note-badge" type="button">📝 スピーカーノートを開く<small>クリック または N キー</small></button>
-
-  <div id="hud">
-    <div id="dots"></div>
-    <div id="hint">CLICK / → / SPACE 進む　← 戻る　｜　N ノート別窓　T タイマー　R リセット</div>
-  </div>
-
-  <script type="importmap">
-  { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
-  </script>
-  <script type="module">
-    import * as THREE from 'three';
-
-    /* ---------- シーン ---------- */
-    const canvas = document.getElementById('bg');
-    const renderer = new THREE.WebGLRenderer({canvas, antialias:true});
-    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
-
-    const scene = new THREE.Scene();
-    const INK = new THREE.Color(0x05080f);
-    scene.background = INK;
-    scene.fog = new THREE.Fog(0x05080f, 60, 230);
-
-    const camera = new THREE.PerspectiveCamera(60, innerWidth/innerHeight, 0.1, 1000);
-
-    /* ---------- ワイヤーフレームの山岳地形 ---------- */
-    const W = 260, D = 520, SW = 90, SD = 180;
-    const geo = new THREE.PlaneGeometry(W, D, SW, SD);
-    geo.rotateX(-Math.PI/2);
-    const pos = geo.attributes.position;
-    function noise(x,z){
-      return (
-        Math.sin(x*0.06)*Math.cos(z*0.05)*8 +
-        Math.sin(x*0.13+z*0.07)*4 +
-        Math.cos(x*0.21)*Math.sin(z*0.17)*2.2
-      );
-    }
-    for(let i=0;i<pos.count;i++){
-      const x=pos.getX(i), z=pos.getZ(i);
-      // 奥(z<0)ほど高くなる山の斜面 + ノイズの起伏。中央の谷=登山道
-      const slope = Math.max(0,(-z))*0.18;
-      const valley = Math.exp(-(x*x)/900)*Math.max(0,(-z))*0.12; // 中央をへこませて道に
-      let h = noise(x,z) + slope - valley;
-      pos.setY(i, h);
-    }
-    geo.computeVertexNormals();
-    const mat = new THREE.MeshBasicMaterial({color:0x22d3ee, wireframe:true, transparent:true, opacity:0.55});
-    const terrain = new THREE.Mesh(geo, mat);
-    scene.add(terrain);
-
-    // ほのかな下地（ソリッド、暗色）で奥行き
-    const baseMat = new THREE.MeshBasicMaterial({color:0x07141c, transparent:true, opacity:0.9});
-    const base = new THREE.Mesh(geo.clone(), baseMat);
-    base.position.y = -0.4;
-    scene.add(base);
-
-    /* ---------- 浮遊パーティクル ---------- */
-    const pcount = 700, parr = new Float32Array(pcount*3);
-    for(let i=0;i<pcount;i++){
-      parr[i*3]   = (Math.random()-0.5)*W;
-      parr[i*3+1] = Math.random()*70+2;
-      parr[i*3+2] = (Math.random()-0.5)*D;
-    }
-    const pgeo = new THREE.BufferGeometry();
-    pgeo.setAttribute('position', new THREE.BufferAttribute(parr,3));
-    const pmat = new THREE.PointsMaterial({color:0x6ff0ff,size:0.6,transparent:true,opacity:0.7});
-    const points = new THREE.Points(pgeo,pmat);
-    scene.add(points);
-
-    /* ---------- カメラの「登山」経路（スライドごと） ---------- */
-    // z:+220(麓) → -150(山頂) に向けて前進、yで上昇
-    const cams = [
-      {pos:[0, 10, 215], look:[0, 6,  120]}, // 1 麓
-      {pos:[0, 12, 165], look:[0, 8,   60]}, // 2 3座
-      {pos:[0, 14, 110], look:[0,10,    0]}, // 3 登りやすい道
-      {pos:[14,18,  40], look:[0,16,  -70]}, // 4 大山の急登（横に振る）
-      {pos:[-8,22, -10], look:[0,24, -110]}, // 5 本音（一番苦しい登り）
-      {pos:[0, 40, -70], look:[0,30, -160]}, // 6 山頂
-      {pos:[0, 60, -95], look:[0,34, -190]}, // 7 学び（山頂上空）
-    ];
-    let idx = 0;
-    const cur = {pos:new THREE.Vector3(...cams[0].pos), look:new THREE.Vector3(...cams[0].look)};
-    const tgt = {pos:new THREE.Vector3(...cams[0].pos), look:new THREE.Vector3(...cams[0].look)};
-
-    /* ---------- スライド制御 ---------- */
-    const slides = [...document.querySelectorAll('.slide')];
-    const dots = document.getElementById('dots');
-    slides.forEach(()=>{const i=document.createElement('i');dots.appendChild(i);});
-    const dotEls = [...dots.children];
-
-    /* ---------- スピーカーノート ---------- */
-    const NOTES = [
-      `おはようございます。azukiazusa です。
-今日は、最近登山にハマっているという話をしたいと思います。`,
-      `ここ最近、週末に3つの山に登りました。高尾山、宝登山（ほどさん）、そして大山です。高尾山は観光地としても有名な山で、名前を聞いたことがある人も多いと思います。宝登山は、長瀞（ながとろ）にある山で、登山初心者でも登りやすい山として知られています。長瀞といえば岩畳も有名ですね。そして大山は、神奈川県にある標高1,252mの山で、多くの登山客で賑わっていました。`,
-      `高尾山と宝登山は、道がよく整備されていて、初心者の自分でも、森の空気を楽しみながら気持ちよく登れました。`,
-      `高尾山の次は大山、という情報がネットにあって、それを信じて登ったのですが、これが大変でした。
-ゴツゴツした岩山で、急な登りが延々と続きます。翌日には、見事にふくらはぎが筋肉痛になりました。下りのダメージが特に大きかったですね。`,
-      `登っている最中の頭の中は、こんな感じです。
-「疲れた…」「足が痛い…」「もう帰りたい…」「ぜんぜん楽しくない…」（ここは感情を込めと読む）
-なぜわざわざ休みの日に辛い思いをしなければいけないのか、人間の営みとは大層不思議なものであります。`,
-      `それでもなんとか登り切るその瞬間、山頂で、苦しさが一気に吹き飛ぶような達成感が待っているのです。
-これは、日常では決して味わえない感覚でした。
-不確実性の高い社会では今自分がやっていることが正しいのかどうか、なかなか判断がつかないのですが、登山では目の前の山を登るというシンプルな行為が、目に見える形で結果として返ってくるというのも、登山の魅力のひとつでしょう。`,
-      `最近は、AIのおかげで何でも効率よくこなせるようになりました。
-でも、効率ばかりを追い求めていると、どこかで疲れてしまう気がします。
-だからこそ、たまには自然とふれ合って、あえて不便さを味わうという、その「遠回り」の経験が、心の健康にとって大切なのではないかと思います。
-
-みなさんもよかったら週末、近所の山に登ってみてください。
-以上です。ありがとうございました。
-
-（最後におもしろいことを何か言う）`,
-    ];
-    const badge = document.getElementById('note-badge');
-    let noteWin = null;
-    const PV_CSS = `
-      *{margin:0;padding:0;box-sizing:border-box;}
-      body{font-family:"Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
-        background:#05080f;color:#eaf9ff;padding:24px;min-height:100vh;}
-      #pv-bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;}
-      #pv-num{font-size:14px;letter-spacing:.18em;color:#7fd6e6;}
-      #pv-timer{font-variant-numeric:tabular-nums;font-size:40px;font-weight:800;color:#bfe9f2;
-        border:1px solid rgba(34,211,238,.4);border-radius:10px;padding:2px 14px;cursor:pointer;}
-      #pv-timer.warn{color:#ffd27a;border-color:rgba(255,180,80,.6);}
-      #pv-timer.over{color:#ff6b6b;border-color:#ff6b6b;}
-      #pv-now{font-size:26px;line-height:1.7;white-space:pre-wrap;
-        background:rgba(34,211,238,.06);border-left:4px solid #22d3ee;border-radius:6px;padding:16px 18px;}
-      #pv-nextlabel{margin:22px 0 6px;font-size:12px;letter-spacing:.2em;color:#6d8595;}
-      #pv-nextnote{font-size:16px;line-height:1.6;white-space:pre-wrap;color:#9fb4c2;
-        border-left:3px solid rgba(255,255,255,.15);padding:8px 14px;}
-      #pv-ctrl{display:flex;gap:12px;margin-top:26px;}
-      #pv-ctrl button{flex:1;font:inherit;font-size:18px;font-weight:700;color:#04141c;cursor:pointer;
-        background:linear-gradient(135deg,#22d3ee,#2dd4bf);border:none;border-radius:10px;padding:12px 0;}
-      #pv-back{background:#1a2b33 !important;color:#bfe9f2 !important;}
-    `;
-    const PV_HTML = `
-      <div id="pv-bar"><span id="pv-num">1 / ${slides.length}</span><span id="pv-timer" title="クリックで開始/停止">3:00</span></div>
-      <div id="pv-now"></div>
-      <div id="pv-nextlabel">NEXT ▶</div>
-      <div id="pv-nextnote"></div>
-      <div id="pv-ctrl"><button id="pv-back">◀ 戻る</button><button id="pv-fwd">進む ▶</button></div>
-    `;
-    function openNotesWindow(){
-      if(noteWin && !noteWin.closed){ noteWin.focus(); return; }
-      noteWin = window.open('', 'speakerNotes', 'width=720,height=860');
-      if(!noteWin){ alert('ポップアップがブロックされました。ブラウザで許可してください。'); return; }
-      const d = noteWin.document;
-      d.title = 'スピーカーノート — 発表者ビュー';
-      const st = d.createElement('style'); st.textContent = PV_CSS; d.head.appendChild(st);
-      d.body.innerHTML = PV_HTML;
-      d.getElementById('pv-back').onclick = ()=>prev();
-      d.getElementById('pv-fwd').onclick  = ()=>next();
-      d.getElementById('pv-timer').onclick = ()=>timerToggle();
-      badge.hidden = true;
-      updateNotesWindow();
-      renderTimer();
-    }
-    function updateNotesWindow(){
-      if(!noteWin || noteWin.closed) return;
-      const d = noteWin.document;
-      d.getElementById('pv-num').textContent = (idx+1) + ' / ' + slides.length;
-      d.getElementById('pv-now').textContent = NOTES[idx] || '';
-      d.getElementById('pv-nextnote').textContent =
-        (idx < slides.length-1) ? (NOTES[idx+1] || '') : '（最後のスライドです）';
-    }
-    badge.addEventListener('click', e=>{ e.stopPropagation(); openNotesWindow(); });
-
-    let gaspMode = false;
-    function show(n){
-      idx = Math.max(0, Math.min(slides.length-1, n));
-      slides.forEach((s,i)=>s.classList.toggle('active', i===idx));
-      dotEls.forEach((d,i)=>d.classList.toggle('on', i===idx));
-      updateNotesWindow();
-      gaspMode = (idx===4);                  // 「疲れた…」スライドで霧＋視界狭窄
-      document.body.classList.toggle('gasp', gaspMode);
-      const c = cams[idx];
-      tgt.pos.set(...c.pos); tgt.look.set(...c.look);
-      // 終盤(山頂以降)で自然写真へ切替
-      const naturePhotos = {
-        5:'images/web/wide-landscape-view.jpg',
-        6:'images/web/wide-landscape-view.jpg',
-      };
-      const nat = document.getElementById('nature');
-      if(naturePhotos[idx]){
-        nat.style.backgroundImage = `url('${naturePhotos[idx]}')`;
-        document.body.classList.add('nature');
-      }else{
-        document.body.classList.remove('nature');
-      }
-    }
-    function next(){ if(!autoStarted){autoStarted=true; timerStart();} show(idx+1); }
-    function prev(){ show(idx-1); }
-
-    /* ---------- 3分タイマー ---------- */
-    const TOTAL = 180; // 3分
-    const timerEl = document.getElementById('timer');
-    let tState='idle', tElapsed=0, tStartEpoch=0, autoStarted=false;
-    function fmt(s){const a=Math.abs(s),m=Math.floor(a/60),ss=Math.floor(a%60);return m+':'+String(ss).padStart(2,'0');}
-    function timerStart(){ if(tState==='run')return; tStartEpoch=Date.now()-tElapsed*1000; tState='run'; }
-    function timerPause(){ if(tState!=='run')return; tElapsed=(Date.now()-tStartEpoch)/1000; tState='paused'; }
-    function timerToggle(){ tState==='run' ? timerPause() : timerStart(); }
-    function timerReset(){ tState='idle'; tElapsed=0; autoStarted=false; renderTimer(); }
-    function renderTimer(){
-      if(tState==='run') tElapsed=(Date.now()-tStartEpoch)/1000;
-      const rem = TOTAL - tElapsed;
-      const txt = (rem<0?'+':'') + fmt(rem);
-      timerEl.textContent = txt;
-      timerEl.classList.toggle('idle', tState==='idle');
-      timerEl.classList.toggle('warn', rem<=30 && rem>0);
-      timerEl.classList.toggle('over', rem<=0);
-      if(noteWin && !noteWin.closed){       // 発表者ビューのタイマーも同期
-        const te = noteWin.document.getElementById('pv-timer');
-        if(te){ te.textContent = txt; te.className = rem<=0?'over':(rem<=30?'warn':''); }
-      } else if(noteWin && noteWin.closed){  // 別窓を閉じたら案内を再表示
-        noteWin = null; badge.hidden = false;
-      }
-    }
-    setInterval(renderTimer, 200); renderTimer();
-
-    addEventListener('keydown', e=>{
-      if(['ArrowRight',' ','Enter','PageDown'].includes(e.key)){e.preventDefault();next();}
-      else if(['ArrowLeft','PageUp'].includes(e.key)){e.preventDefault();prev();}
-      else if(e.key==='Home'){show(0);} else if(e.key==='End'){show(slides.length-1);}
-      else if(e.key.toLowerCase()==='n'){ openNotesWindow(); }
-      else if(e.key.toLowerCase()==='t'){ timerToggle(); }
-      else if(e.key.toLowerCase()==='r'){ timerReset(); }
-    });
-    addEventListener('click', e=>{ e.clientX < innerWidth*0.22 ? prev() : next(); });
-
-    show(0);
-
-    /* ---------- レンダリングループ ---------- */
-    const clock = new THREE.Clock();
-    function animate(){
-      requestAnimationFrame(animate);
-      const t = clock.getElapsedTime();
-      // カメラを滑らかに目標へ
-      cur.pos.lerp(tgt.pos, 0.05);
-      cur.look.lerp(tgt.look, 0.05);
-      camera.position.copy(cur.pos);
-      camera.position.y += Math.sin(t*0.6)*0.4; // 微かな揺れで“歩いている”感
-      camera.lookAt(cur.look);
-      // パーティクル上昇
-      const pa = pgeo.attributes.position;
-      for(let i=0;i<pcount;i++){
-        let y = pa.getY(i)+0.04;
-        if(y>74) y=2;
-        pa.setY(i,y);
-      }
-      pa.needsUpdate = true;
-      terrain.material.opacity = 0.4 + Math.sin(t*1.2)*0.08;
-      renderer.render(scene,camera);
-    }
-    animate();
-
-    /* ---------- リサイズ ---------- */
-    function resize(){
-      renderer.setSize(innerWidth,innerHeight);
-      camera.aspect = innerWidth/innerHeight;
-      camera.updateProjectionMatrix();
-    }
-    addEventListener('resize',resize); resize();
-  </script>
-</body>
+    <script type="module" src="/src/main.js"></script>
+  </body>
 </html>
