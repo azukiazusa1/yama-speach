@@ -12,7 +12,8 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  # CDN反映中のデプロイを新しいRunで中断しない。
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -36,6 +37,12 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Verify build output
+        run: |
+          test -f dist/index.html
+          test -d dist/assets
+          ! grep -q '/src/main.js' dist/index.html
+
       - name: Upload GitHub Pages artifact
         uses: actions/upload-pages-artifact@v4
         with:
@@ -51,3 +58,6 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+        with:
+          # GitHub PagesのCDN purgeが既定の10分を超える場合がある。
+          timeout: 1800000
